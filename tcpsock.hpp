@@ -8,22 +8,20 @@
     #include <ws2tcpip.h>
     #include <windows.h>
     #include <iphlpapi.h>
-    #pragma comment(lib, "Ws2_32.lib")
     #define SO_WINDOWS
     typedef SOCKET sock_t;
 #else 
-    #define INVALID_SOCKET -1
     #include <sys/socket.h>
     #include <netinet/in.h>
     #include <arpa/inet.h>
     #include <unistd.h>
     #include <netdb.h>
+    #define INVALID_SOCKET -1
     typedef int sock_t;
 #endif
 
-#include <iostream>
-#include <memory>
-#include <vector>
+#include <string>
+#include <stdexcept>
 
 ////////////////////////////////////////////////////
 ///
@@ -48,7 +46,7 @@
 /// skt::Socket::getAddr() ----> sockaddr_in* - Method
 ///
 /// FUNCTIONS:
-/// skt::getLastError() -------> std::string - Function
+/// skt::getLastError() -------> std::string  - Function
 ///
 ///////////////////////////////////////////////////
 
@@ -431,7 +429,6 @@ public:
         return &addr;
     }
 };
-
 
 // Returns the last error.
 std::string getLastError() {

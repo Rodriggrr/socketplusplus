@@ -2,11 +2,11 @@
 
 ## Introduction
 
-This library is a wrapper around the C socket API. It provides a simple namespace to create a server or a client.
+This library is a wrapper around the C socket API. It provides a simple namespace to create a server or a client throught TCP.
 
 ## Usage
 
-See example files. All the functions are documented in the header files.
+See example files. All the functions are documented in the header file.
 
 ## Compile
 
