@@ -1,4 +1,5 @@
 #include "tcpsock.hpp"
+#include <iostream>
 
 skt::Socket client(49110, LOCALHOST, true);
 
