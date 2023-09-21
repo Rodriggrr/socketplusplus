@@ -8,7 +8,7 @@
     #include <ws2tcpip.h>
     #include <windows.h>
     #include <iphlpapi.h>
-    #define SO_WINDOW
+    #define SO_WINDOWS
     typedef SOCKET sock_t;
 #else 
     #include <sys/socket.h>
@@ -25,7 +25,7 @@
 
 ////////////////////////////////////////////////////
 ///
-/// AUTHOR: Rodrigo Farinon; github.com/rodriggrr/socketplusplus
+/// AUTHOR: Rodrigo Farinon; github.com/rodriggrr
 /// CONTACT: rfarinon@alu.ufc.br
 ///
 /// A simple TCP socket library for C++.
@@ -34,6 +34,8 @@
 /// skt - Namespace
 /// skt::Node - Class
 /// skt::Socket - Class
+///
+/// skt: getLastError() - Function
 /// 
 /// SOCKET METHODS:
 /// skt::Socket::Socket() -----> Constructor
@@ -76,22 +78,21 @@
  */
 namespace skt {
 
-
 // Node class.
 /**
  * 
- * @brief Node class, used to store data about a client. sock fd, ip,
+ * @brief Node class, used to store data about a client. Sock fd, ip, etc.
  * 
  * @param sock_fd   The socket file descriptor of the node.
- * @param ip    The ip of the node.
- * @param port  The port of the node.
+ * @param ip        The ip of the node.
+ * @param port      The port of the node.
  * 
  * @note No parameters are required to create a node, but you can set them later.
  * The destructor will close the socket file descriptor, this behavior can be changed by passing true to the constructor.
- * @note Examples:
- * @note skt::Node node; - Creates a node with no parameters.
- * @note skt::Node node(true); - Creates a node with no parameters, but the destructor will not close the socket file descriptor.
- * @note skt::Node node(sock_fd, ip, port); - Creates a node with the given parameters.
+ * @warning Examples:
+ * @warning skt::Node node; - Creates a node with no parameters.
+ * @warning skt::Node node(true); - Creates a node with no parameters, but the destructor will not close the socket file descriptor.
+ * @warning skt::Node node(sock_fd, ip, port); - Creates a node with the given parameters.
  *
  */
 class Node {
@@ -236,7 +237,7 @@ class Socket {
     sock_t socket;
     std::string ip;
     sockaddr_in addr;
-    int addrLen = sizeof(addr);
+    socklen_t addrLen = sizeof(addr);
     bool reuseAddr;
     char buffer[4096];
     int port{}, queued{};
@@ -279,7 +280,7 @@ class Socket {
                 throw std::runtime_error("Error setting socket options");
         }
 
-        if(::bind(socket, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+        if(::bind(socket, (struct sockaddr *)&addr, addrLen) < 0) {
             throw std::runtime_error("Error binding socket to IP/Port");
         }
     }
@@ -327,12 +328,11 @@ public:
      * 
      * @brief Accepts a new connection. Hangs until a new connection is made.
      * 
-     * @throw std::runtime_error() if the socket can't be accepted, or it it is a client socket.
+     * @throw std::runtime_error() if the socket can't be accepted, or if it is a client socket.
      * 
      * @returns A pointer to a skt::Node object, containing the new socket file descriptor, ip and port. See skt::Node class.
      * 
-     * @warning Put the returned pointer in a std::unique_ptr<Node> to avoid memory leaks, or a shared_ptr<Node> if you want to share it.
-     * Otherwise, you will have to delete it manually.
+     * @warning Put the returned pointer in a smart pointer to avoid memory leaks, or delete it manually.
      * 
      */
     Node* accept() {
@@ -361,8 +361,8 @@ public:
      * 
      * @returns A pointer to a skt::Node object, containing the new socket file descriptor, ip and port. See skt::Node class.
      * 
-     * @warning Put the returned pointer in a std::unique_ptr<Node> to avoid memory leaks, or a shared_ptr<Node> if you want to share it.
-     * Otherwise, you will have to delete it manually.
+     * @warning Put the returned pointer in a smart pointer to avoid memory leaks, or delete it manually.
+     * @warning IMPORTANT: on windows, as a client, if connecting to localhost, ANY_ADDR 0.0.0.0 will fail. Use LOCALHOST macro instead.
      * 
      */
     Node* connectRef(){
@@ -388,9 +388,9 @@ public:
     // Connects to a server.
     /**
      * 
-     * @brief Connects to a server.
+     * @brief Connects to a server and stores the socket file descriptor, ip and port in the socket object.
      * 
-     * @throw std::runtime_error() if the socket can't be connected, or it it is a server socket.
+     * @throw std::runtime_error() if the socket can't be connected, or if it is a server socket.
      * 
      * @warning IMPORTANT: on windows, as a client, if connecting to localhost, ANY_ADDR 0.0.0.0 will fail. Use LOCALHOST macro instead.
      * 
