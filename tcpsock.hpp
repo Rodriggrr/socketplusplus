@@ -50,14 +50,14 @@
 ///
 /// NODE METHODS:
 /// skt::Node::Node() ---------> Constructor
-/// skt::Node::send() ---------> void          - Method
-/// skt::Node::recv() ---------> std::string   - Method
-/// skt::Node::getSock() ------> sock_t        - Method
-/// skt::Node::getIp() --------> std::string   - Method
-/// skt::Node::getIpStr() -----> std::string   - Method
-/// skt::Node::getPort() ------> int           - Method
-/// skt::Node::getAddr() ------> sockaddr_in*  - Method
-/// skt::Node::getAddrLen() ---> socklen_t*    - Method
+/// skt::Node::send() ---------> void         - Method
+/// skt::Node::recv() ---------> std::string  - Method
+/// skt::Node::getSock() ------> sock_t       - Method
+/// skt::Node::getIp() --------> std::string  - Method
+/// skt::Node::getIpStr() -----> std::string  - Method
+/// skt::Node::getPort() ------> int          - Method
+/// skt::Node::getAddr() ------> sockaddr_in* - Method
+/// skt::Node::getAddrLen() ---> socklen_t*   - Method
 ///
 /// FUNCTIONS:
 /// skt::getLastError() -------> std::string  - Function
@@ -343,7 +343,7 @@ public:
 
         node->setSock(::accept(socket, (struct sockaddr *)node->getAddr(), node->getAddrLen()));
         node->setIp(inet_ntoa(node->getAddr()->sin_addr));
-        node->setPort(ntohs(node->getAddr()->sin_port));
+        node->setPort(port);
 
         if(node->getSock() < 0) {
             throw std::runtime_error("Error accepting connection");
