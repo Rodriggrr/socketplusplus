@@ -8,7 +8,7 @@
     #include <ws2tcpip.h>
     #include <windows.h>
     #include <iphlpapi.h>
-    #define SO_WINDOWS
+    #define SO_WINDOW
     typedef SOCKET sock_t;
 #else 
     #include <sys/socket.h>
@@ -25,14 +25,15 @@
 
 ////////////////////////////////////////////////////
 ///
+/// AUTHOR: Rodrigo Farinon; github.com/rodriggrr/socketplusplus
+/// CONTACT: rfarinon@alu.ufc.br
+///
 /// A simple TCP socket library for C++.
 /// 
 /// TOC:
 /// skt - Namespace
 /// skt::Node - Class
 /// skt::Socket - Class
-///
-/// skt: getLastError() - Function
 /// 
 /// SOCKET METHODS:
 /// skt::Socket::Socket() -----> Constructor
@@ -44,6 +45,17 @@
 /// skt::Socket::close() ------> void         - Method
 /// skt::Socket::getSocket() --> sock_t       - Method
 /// skt::Socket::getAddr() ----> sockaddr_in* - Method
+///
+/// NODE METHODS:
+/// skt::Node::Node() ---------> Constructor
+/// skt::Node::send() ---------> void          - Method
+/// skt::Node::recv() ---------> std::string   - Method
+/// skt::Node::getSock() ------> sock_t        - Method
+/// skt::Node::getIp() --------> std::string   - Method
+/// skt::Node::getIpStr() -----> std::string   - Method
+/// skt::Node::getPort() ------> int           - Method
+/// skt::Node::getAddr() ------> sockaddr_in*  - Method
+/// skt::Node::getAddrLen() ---> socklen_t*    - Method
 ///
 /// FUNCTIONS:
 /// skt::getLastError() -------> std::string  - Function
@@ -61,15 +73,14 @@
  * 
  * @note All classes and functions are inside this namespace.
  * 
- * 
- * 
  */
 namespace skt {
+
 
 // Node class.
 /**
  * 
- * @brief Node class, used to store data about a node.
+ * @brief Node class, used to store data about a client. sock fd, ip,
  * 
  * @param sock_fd   The socket file descriptor of the node.
  * @param ip    The ip of the node.
@@ -90,12 +101,8 @@ class Node {
     sockaddr_in addr;
     socklen_t addrLen = sizeof(addr);
     bool noCloseOnDestruct = false;
+    char buffer[4096];
 
-    void setAddr() {
-        addr.sin_family = AF_INET;
-        addr.sin_port = htons(port);
-        addr.sin_addr.s_addr = inet_addr(ip.c_str());
-    }
 
 public:
 
@@ -109,16 +116,17 @@ public:
         this->sock_fd = sock_fd;
         this->ip = ip;
         this->port = port;
-        setAddr();
+    }
+
+    void setAddr() {
+        addr.sin_family = AF_INET;
+        addr.sin_port = htons(port);
+        addr.sin_addr.s_addr = inet_addr(ip.c_str());
     }
 
     ~Node() {
         if(noCloseOnDestruct) return;
-        #ifdef SO_WINDOWS
-            closesocket(sock_fd);
-        #else
-            close(sock_fd);
-        #endif
+        close(sock_fd);
     }
 
     operator sock_t() const { return sock_fd; }
@@ -162,6 +170,47 @@ public:
     socklen_t* getAddrLen() {
         return &addrLen;
     }
+
+    // Send data to the connected server.
+    /**
+     * 
+     * @brief Every node is a client, so this method sends data to the server it is connected to.
+     * 
+     * @param data The data to be sent.
+     * 
+     * @throw std::runtime_error() if the data can't be sent.
+     * 
+     */
+    void send(std::string data) {
+        int sent = ::send(sock_fd, data.c_str(), data.size(), 0);
+        if(sent < 0) {
+            throw std::runtime_error("Error sending data");
+        }
+    }
+
+    // Receives data from the connected server.
+    /**
+     * 
+     * @brief As a client, this method receives data from the server, and stores it in the buffer.
+     * 
+     * @param buffer[] The buffer to store the data. If omitted, it will use the internal buffer.
+     * 
+     * @returns The data received, as a std::string.
+     * 
+     * @throw std::runtime_error() if the data can't be received.
+     * 
+     */
+    std::string recv(char buffer[]=nullptr) {
+        if(buffer == nullptr) { buffer = this->buffer; }
+
+        int received = ::recv(sock_fd, buffer, 4096, 0);
+        if(received < 0) {
+            throw std::runtime_error("Error receiving data");
+        }
+        std::string data = std::string(buffer, received);
+        return data;
+    }
+
 };
 
 // Socket class.
@@ -173,7 +222,7 @@ public:
  * @param ip        The ip that the socket will be bind, or to connected to. If not set, fallback to 0.0.0.0
  * @param isClient  Tell the socket if it is a client or not. If not set, fallback to false. Check note below.
  * @param reuseAddr Tell the socket if it should reuse the address or not. If not set, fallback to true.
- * @param queued    Tell the socket how many connections it should queue until droping requisitions. If not set, fallback to 3.
+ * @param queued    Tell the socket how many connections it should queue until droping requisitions. If not set, fallback to 10.
  * 
  * @throw std::runtime_error() if the socket can't be created. Sometimes it can be fixed, so you should try to treat it. Ex: bad port.
  * 
@@ -187,7 +236,7 @@ class Socket {
     sock_t socket;
     std::string ip;
     sockaddr_in addr;
-    socklen_t addrLen = sizeof(addr);
+    int addrLen = sizeof(addr);
     bool reuseAddr;
     char buffer[4096];
     int port{}, queued{};
@@ -201,7 +250,7 @@ class Socket {
             throw std::runtime_error("WSAStartup failed");
         }
     #endif
-        sock = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        sock = ::socket(AF_INET, SOCK_STREAM, 0);
         if (sock == INVALID_SOCKET) {
             throw std::runtime_error("Error creating socket");
         }
@@ -211,8 +260,12 @@ class Socket {
     void setAddr() {
         addr.sin_family = AF_INET;
         addr.sin_port = htons(port);
-        addr.sin_addr.s_addr = inet_addr(ip.c_str());
+        if(isClient)
+            addr.sin_addr.s_addr = inet_addr(ip.c_str());
+        else
+            addr.sin_addr.s_addr = INADDR_ANY;
     }
+
 
     void bindSocket() {
         if(reuseAddr) {
@@ -226,7 +279,7 @@ class Socket {
                 throw std::runtime_error("Error setting socket options");
         }
 
-        if(::bind(socket, (struct sockaddr *)&addr, addrLen) < 0) {
+        if(::bind(socket, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
             throw std::runtime_error("Error binding socket to IP/Port");
         }
     }
@@ -244,7 +297,7 @@ public:
         this->port = port;
         this->isClient = isClient;
         this->reuseAddr = true;
-        this->queued = 3;
+        this->queued = 10;
         this->socket = createSocket();
         setAddr();
 
@@ -255,11 +308,12 @@ public:
 
     }
 
-    Socket(int port, std::string ip=ANY_ADDR, bool isClient=false, bool reuseAddr=true, int queued=3){
+    Socket(int port, std::string ip=ANY_ADDR, bool isClient=false, bool reuseAddr=true, int queued=10){
         this->ip = ip;
         this->port = port;
         this->isClient = isClient;
         this->socket = createSocket();
+        this->queued = queued;
         setAddr();
 
         if(!isClient){
@@ -287,11 +341,10 @@ public:
         }
 
         Node* node = new Node();
-        auto addr = node->getAddr();
-        auto addrLen = node->getAddrLen();
 
-        node->setSock(::accept(socket, (struct sockaddr *)addr, addrLen));
-        
+        node->setSock(::accept(socket, (struct sockaddr *)node->getAddr(), node->getAddrLen()));
+        node->setIp(inet_ntoa(node->getAddr()->sin_addr));
+        node->setPort(ntohs(node->getAddr()->sin_port));
 
         if(node->getSock() < 0) {
             throw std::runtime_error("Error accepting connection");
