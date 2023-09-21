@@ -104,7 +104,6 @@ class Node {
     bool noCloseOnDestruct = false;
     char buffer[4096];
 
-
 public:
 
     Node() = default;
