@@ -81,18 +81,20 @@ namespace skt {
 // Node class.
 /**
  * 
- * @brief Node class, used to store data about a client. Sock fd, ip, etc.
+ * @brief ## `skt::Node`
+ * 
  * 
  * @param sock_fd   The socket file descriptor of the node.
  * @param ip        The ip of the node.
  * @param port      The port of the node.
  * 
- * @note No parameters are required to create a node, but you can set them later.
- * The destructor will close the socket file descriptor, this behavior can be changed by passing true to the constructor.
- * @warning Examples:
- * @warning skt::Node node; - Creates a node with no parameters.
- * @warning skt::Node node(true); - Creates a node with no parameters, but the destructor will not close the socket file descriptor.
- * @warning skt::Node node(sock_fd, ip, port); - Creates a node with the given parameters.
+ * @note - Used to store data about a client: socket file descriptor, ip, etc.
+ * @note - No parameters are required to create a node, but you will have to set them later.
+ * @note - The destructor will close the socket file descriptor, this behavior can be changed by passing true to the constructor.
+ * @note #### Examples:
+ * @note `skt::Node node;` - Creates a node with no parameters.
+ * @note `skt::Node node(true);` - Creates a node with no parameters, but the destructor will not close the socket file descriptor.
+ * @note `skt::Node node(sock_fd, ip, port);` - Creates a node with the given parameters.
  *
  */
 class Node {
@@ -178,7 +180,7 @@ public:
      * 
      * @param data The data to be sent.
      * 
-     * @throw std::runtime_error() if the data can't be sent.
+     * @throw `std::runtime_error()` if the data can't be sent.
      * 
      */
     void send(std::string data) {
@@ -195,9 +197,9 @@ public:
      * 
      * @param buffer[] The buffer to store the data. If omitted, it will use the internal buffer.
      * 
-     * @returns The data received, as a std::string.
+     * @returns The data received, as a std::string. If the data bytes is 0, it will return an empty string.
      * 
-     * @throw std::runtime_error() if the data can't be received.
+     * @throw `std::runtime_error()` if the data can't be received.
      * 
      */
     std::string recv(char buffer[]=nullptr) {
@@ -208,6 +210,8 @@ public:
             throw std::runtime_error("Error receiving data");
         }
         std::string data = std::string(buffer, received);
+        if(received == 0) data = "";
+
         return data;
     }
 
@@ -216,7 +220,7 @@ public:
 // Socket class.
 /**
  * 
- * @brief Main socket class of the library.
+ * @brief ## `skt::Socket`
  * 
  * @param port      The port that the socket will connect or bind. No default value, must be set.
  * @param ip        The ip that the socket will be bind, or to connected to. If not set, fallback to 0.0.0.0
@@ -224,12 +228,22 @@ public:
  * @param reuseAddr Tell the socket if it should reuse the address or not. If not set, fallback to true.
  * @param queued    Tell the socket how many connections it should queue until droping requisitions. If not set, fallback to 10.
  * 
- * @throw std::runtime_error() if the socket can't be created. Sometimes it can be fixed, so you should try to treat it. Ex: bad port.
+ * @throw `std::runtime_error()` if the socket can't be created. Sometimes it can be fixed, so you should try to treat it. Ex: bad port.
  * 
- * @warning If client, MUST call connect() or connectRef() to connect to a server.
- * @warning As a client, if connecting to localhost, LOCALHOST should be used instead of ANY_ADDR in windows.
  * @note If the socket is a client, the ip and port will be used to connect to the server.
  * 
+ * @note ##### As a Client:
+ * @note - If client, MUST call `connect()` or `connectRef()` to connect to a server. `client.connect()`
+ * @note - As a client, if connecting to localhost, `LOCALHOST` should be used instead of `ANY_ADDR` in windows.
+ * @note ##### As a Server:
+ * @note - After a unexpected error, the socket may be in a `TIME_WAIT` state, and even with `SO_REUSEADDR`, it may not be able to bind to the same port. So, if your server can't bind to the same port after a crash, or a Ctrl + C, you should wait a few seconds before trying to bind again, or change port.
+ * @note #### Overloads:
+ * @note `skt::Socket sock(49110);` - Creates a server socket, listening on port 49110, binded to 0.0.0.0
+ * @note `skt::Socket sock(49110, true)` - Creates a client socket, connecting to 127.0.0.0 on port 49110.
+ * @note `skt::Socket sock(49110, LOCALHOST, true);` - Creates a client socket, connecting to localhost on port 49110.
+ * @note `skt::Socket sock(49110, ANY_ADDR, false, true, 10);` - Creates a server socket, listening on port 49110, with reuseAddr set to true, and queued set to 10.
+ * 
+ *
  */
 class Socket {
     
@@ -325,11 +339,13 @@ public:
     // Accepts a new connection.
     /**
      * 
-     * @brief Accepts a new connection. Hangs until a new connection is made.
+     * @brief ## Accepts a new connection.
      * 
-     * @throw std::runtime_error() if the socket can't be accepted, or if it is a client socket.
+     * @note Hangs until a new connection is made.
      * 
-     * @returns A pointer to a skt::Node object, containing the new socket file descriptor, ip and port. See skt::Node class.
+     * @throw `std::runtime_error()` if the socket can't be accepted, or if it is a client socket.
+     * 
+     * @returns A pointer to a `skt::Node` object, containing the new socket file descriptor, ip and port. See skt::Node class.
      * 
      * @warning Put the returned pointer in a smart pointer to avoid memory leaks, or delete it manually.
      * 
@@ -354,14 +370,14 @@ public:
     // Connects to a server.
     /**
      * 
-     * @brief Connects to a server.
+     * @brief ## Connects to a server.
      * 
-     * @throw std::runtime_error() if the socket can't be connected, or it it is a server socket.
+     * @throw `std::runtime_error()` if the socket can't be connected, or it it is a server socket.
      * 
-     * @returns A pointer to a skt::Node object, containing the new socket file descriptor, ip and port. See skt::Node class.
+     * @returns A pointer to a `skt::Node` object, containing the new socket file descriptor, ip and port. See skt::Node class.
      * 
-     * @warning Put the returned pointer in a smart pointer to avoid memory leaks, or delete it manually.
-     * @warning IMPORTANT: on windows, as a client, if connecting to localhost, ANY_ADDR 0.0.0.0 will fail. Use LOCALHOST macro instead.
+     * @warning - Put the returned pointer in a smart pointer to avoid memory leaks, or delete it manually.
+     * @warning - IMPORTANT: on windows, as a client, if connecting to localhost, `ANY_ADDR` 0.0.0.0 will fail. Use `LOCALHOST` macro instead.
      * 
      */
     Node* connectRef(){
@@ -387,11 +403,13 @@ public:
     // Connects to a server.
     /**
      * 
-     * @brief Connects to a server and stores the socket file descriptor, ip and port in the socket object.
+     * @brief ## Connects to a server. 
      * 
-     * @throw std::runtime_error() if the socket can't be connected, or if it is a server socket.
+     * @note Stores the socket file descriptor, ip and port in the socket object.
      * 
-     * @warning IMPORTANT: on windows, as a client, if connecting to localhost, ANY_ADDR 0.0.0.0 will fail. Use LOCALHOST macro instead.
+     * @throw `std::runtime_error()` if the socket can't be connected, or if it is a server socket.
+     * 
+     * @warning IMPORTANT: on windows, as a client, if connecting to localhost, `ANY_ADDR` 0.0.0.0 will fail. Use `LOCALHOST` macro instead.
      * 
      */
     void connect(){
@@ -407,14 +425,14 @@ public:
     // Sends data to the socket.
     /**
      * 
-     * @brief Sends data to a socket.
+     * @brief ## Sends data to a socket.
      * 
      * @param data The data to be sent.
      * @param socket The socket to send the data. If a client, it can be omitted.
      * 
      * @return The number of bytes sent.
      * 
-     * @throw std::runtime_error() if the data can't be sent.
+     * @throw `std::runtime_error()` if the data can't be sent.
      * 
      */
     int send(std::string data, sock_t socket=INVALID_SOCKET) {
@@ -430,7 +448,7 @@ public:
     // Receives data from the socket.
     /**
      * 
-     * @brief Receives data from a socket.
+     * @brief ## Receives data from a socket.
      * 
      * 
      * @param socket The socket to receive the data. If a client, it can be omitted.
@@ -438,8 +456,9 @@ public:
      * 
      * @return The data received.
      * 
-     * @throw std::runtime_error() if the data can't be received.
+     * @throw `std::runtime_error()` if the data can't be received.
      * 
+     * @note Hangs until data is received.
      */
     std::string recv(sock_t socket=INVALID_SOCKET, char buffer[]=nullptr) {
         if(socket == INVALID_SOCKET) { socket = this->socket; }
@@ -455,9 +474,9 @@ public:
     // Closes the socket.
     /**
      * 
-     * @brief Closes the socket.
+     * @brief ## Closes the socket.
      * 
-     * @throw std::runtime_error() if the socket can't be closed.
+     * @throw `std::runtime_error()` if the socket can't be closed.
      * 
      */
     void close() {
