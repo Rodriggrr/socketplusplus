@@ -454,7 +454,7 @@ public:
      * @param socket The socket to receive the data. If a client, it can be omitted.
      * @param buffer[] The buffer to store the data. If omitted, it will use the internal buffer.
      * 
-     * @return The data received.
+     * @return The data received. If the data bytes is 0, it will return an empty string.
      * 
      * @throw `std::runtime_error()` if the data can't be received.
      * 
@@ -468,6 +468,8 @@ public:
         if(received < 0) {
             throw std::runtime_error("Error receiving data");
         }
+        if(received == 0) return "";
+
         return std::string(buffer, received);
     }
 
