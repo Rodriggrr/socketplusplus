@@ -10,7 +10,7 @@
     #include <iphlpapi.h>
     #define SO_WINDOWS
     typedef SOCKET sock_t;
-#else 
+#else
     #include <sys/socket.h>
     #include <netinet/in.h>
     #include <arpa/inet.h>
@@ -29,14 +29,14 @@
 /// CONTACT: rfarinon@alu.ufc.br
 ///
 /// A simple TCP socket library for C++.
-/// 
+///
 /// TOC:
 /// skt - Namespace
 /// skt::Node - Class
 /// skt::Socket - Class
 ///
 /// skt: getLastError() - Function
-/// 
+///
 /// SOCKET METHODS:
 /// skt::Socket::Socket() -----> Constructor
 /// skt::Socket::accept() -----> skt::Node*   - Method
@@ -66,28 +66,28 @@
 
 // Socket namespace;
 /**
- * 
+ *
  * @brief Main namespace of the library.
- * 
+ *
  * @param LOCALHOST The localhost ip macro: 127.0.0.1, there's no better place than home.
  * @param ANY_ADDR  The any address ip macro: 0.0.0.0, used to bind to any address. 
  * @param sock_t    The socket file descriptor type. It is a int on linux, and a SOCKET on windows.
- * 
+ *
  * @note All classes and functions are inside this namespace.
- * 
+ *
  */
 namespace skt {
 
 // Node class.
 /**
- * 
+ *
  * @brief ## `skt::Node`
- * 
- * 
+ *
+ *
  * @param sock_fd   The socket file descriptor of the node.
  * @param ip        The ip of the node.
  * @param port      The port of the node.
- * 
+ *
  * @note - Used to store data about a client: socket file descriptor, ip, etc.
  * @note - No parameters are required to create a node, but you will have to set them later.
  * @note - The destructor will close the socket file descriptor, this behavior can be changed by passing true to the constructor.
@@ -175,13 +175,13 @@ public:
 
     // Send data to the connected server.
     /**
-     * 
+     *
      * @brief Every node is a client, so this method sends data to the server it is connected to.
-     * 
+     *
      * @param data The data to be sent.
-     * 
+     *
      * @throw `std::runtime_error()` if the data can't be sent.
-     * 
+     *
      */
     void send(std::string data) {
         int sent = ::send(sock_fd, data.c_str(), data.size(), 0);
@@ -192,15 +192,15 @@ public:
 
     // Receives data from the connected server.
     /**
-     * 
+     *
      * @brief As a client, this method receives data from the server, and stores it in the buffer.
-     * 
+     *
      * @param buffer[] The buffer to store the data. If omitted, it will use the internal buffer.
-     * 
+     *
      * @returns The data received, as a std::string. If the data bytes is 0, it will return an empty string.
-     * 
+     *
      * @throw `std::runtime_error()` if the data can't be received.
-     * 
+     *
      */
     std::string recv(char buffer[]=nullptr) {
         if(buffer == nullptr) { buffer = this->buffer; }
@@ -219,19 +219,19 @@ public:
 
 // Socket class.
 /**
- * 
+ *
  * @brief ## `skt::Socket`
- * 
+ *
  * @param port      The port that the socket will connect or bind. No default value, must be set.
  * @param ip        The ip that the socket will be bind, or to connected to. If not set, fallback to 0.0.0.0
  * @param isClient  Tell the socket if it is a client or not. If not set, fallback to false. Check note below.
  * @param reuseAddr Tell the socket if it should reuse the address or not. If not set, fallback to true.
  * @param queued    Tell the socket how many connections it should queue until droping requisitions. If not set, fallback to 10.
- * 
+ *
  * @throw `std::runtime_error()` if the socket can't be created. Sometimes it can be fixed, so you should try to treat it. Ex: bad port.
- * 
+ *
  * @note If the socket is a client, the ip and port will be used to connect to the server.
- * 
+ *
  * @note ##### As a Client:
  * @note - If client, MUST call `connect()` or `connectRef()` to connect to a server. `client.connect()`
  * @note - As a client, if connecting to localhost, `LOCALHOST` should be used instead of `ANY_ADDR` in windows.
@@ -242,7 +242,7 @@ public:
  * @note `skt::Socket sock(49110, true)` - Creates a client socket, connecting to 127.0.0.0 on port 49110.
  * @note `skt::Socket sock(49110, LOCALHOST, true);` - Creates a client socket, connecting to localhost on port 49110.
  * @note `skt::Socket sock(49110, ANY_ADDR, false, true, 10);` - Creates a server socket, listening on port 49110, with reuseAddr set to true, and queued set to 10.
- * 
+ *
  *
  */
 class Socket {
@@ -500,6 +500,10 @@ public:
     // Returns the address.
     sockaddr_in* getAddr() {
         return &addr;
+    }
+    // Returns the port.
+    int getPort() {
+	return port;
     }
 };
 
